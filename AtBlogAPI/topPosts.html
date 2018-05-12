@@ -1,0 +1,50 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <title></title>
+	<meta charset="utf-8" />
+</head>
+<body>
+<h1>TopBlogPosts</h1>
+
+<table id="blogs" style="width: 100%">
+    <tr>
+    <th align="left">Rating</th>
+    <th align="left">Creation Date</th>
+    <th align="left">User</th>
+    <th align="left">Blog Id</th>
+    <th align="left">Blog Text</th>
+</table>
+    <img id="loading" src="ajax-loader-b.gif" />
+
+    <script src="https://ajax.aspnetcdn.com/ajax/jQuery/jquery-2.0.3.min.js"></script>
+ <script>
+     $(document)
+         .ready(function() {
+             var apiUser = localStorage.getItem("UserName");
+             $("#userField").val(apiUser);
+
+             // Send an AJAX request
+             $.getJSON('/api/blogs/GetTopRatedPosts')
+                 .done(function(data) {
+                     // On success, 'data' contains a list of blogs.
+                     $.each(data,
+                         function(key, item) {
+                             // Add a list item for the blog.
+                             $('<tr> ' + formatItem(item) + '</tr>').appendTo($('#blogs'));
+                         });
+                     $("#loading").hide();
+                 });
+
+
+                     function formatItem(b) {
+                         return '<td>' + b.TotalVotes + '</td>' +
+                                '<td>' + b.CreationDate + '</td>' +
+                                '<td>' + b.CreatedBy + '</td>' +
+                                '<td>' + b.Id + '</td>' +
+                                '<td>' + b.Text + '</td>' ;
+                     }                 
+         });
+</script>
+</body>
+</html>

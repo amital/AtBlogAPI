@@ -1,0 +1,230 @@
+﻿
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <title>Pendo Blog App</title>
+</head>
+<body>
+
+
+<div>
+    <h2>Show Top Posts</h2>
+    <input type="button" id="btnTopPosts" value="Show Top Posts" onclick="topPosts();" />
+</div>
+<div>
+    <h3>User Name:</h3>
+    <input id="userField" type="text" onblur="userFieldExit()" size="8" minlength="3" required />
+</div>
+<div>
+    <h2>All Blogs</h2>
+    <ul id="blogs"/>
+
+    <img id="loading" src="ajax-loader-b.gif" />
+</div>
+<br/>
+<div>    
+    <input type="button" id="btnAddBlogEntry" value="Add Blog Entry" onclick="addBtnClicked();"/>
+</div>
+<br/>
+<div id="blogFields">
+    <textarea id="blogText" rows="4" cols="50"></textarea>
+    <br/>
+        <input type="button" id="btnConfirmAddBlog" value="Send Blog Entry" onclick="sendBlogEntity();"/>
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        <!--<div class="divider" ></div>-->
+        <input type="button" id="btnhideSendBlog" value="Cancel" onclick="hideBlogFieldsDiv();" />
+
+    <br />
+    <br/>
+    </div>
+    <br />
+    <br />
+    <div>
+        <h2>Search by ID</h2>
+        <input type="text" id="blogId" size="5" />
+        <input type="button" value="Search" onclick="find();" />
+        <ul id="blog1" />
+    </div>
+
+    <script src="https://ajax.aspnetcdn.com/ajax/jQuery/jquery-2.0.3.min.js"></script>
+    <script>
+        var uri = 'api/blogs';
+        var mode;
+        var inField = false;
+
+        function topPosts(parameters) {
+            //window.open("/topPosts.html");
+            window.location.href = "/topPosts.html";
+        }
+        function userFieldExit(e) {
+            if (inField) {
+                inField = false;
+            } else {
+                if ($("#userField").val().trim().length < 3) {
+                    alert("user name is invalid");
+                    $('#userField').focus();
+                    inField = true;
+                } else {
+                    location.reload();
+                    localStorage.setItem("UserName", $("#userField").val().trim());
+                };
+            };
+        };
+
+        $(document).ready(function () {
+            var apiUser = localStorage.getItem("UserName");
+            $("#userField").val(apiUser);
+
+            // Send an AJAX request
+            $.getJSON(uri)
+                .done(function (data) {
+                    // On success, 'data' contains a list of blogs.
+                    $.each(data, function (key, item) {
+                        // Add a list item for the blog.
+                        $('<li>' + formatItem(item)).appendTo($('#blogs'));
+                    });
+
+                    $("#loading").hide();
+                });
+        });
+
+        function formatItem(item) {
+            var usr = $('#userField').val();
+            var strt = '<span>Created By: ' + item.CreatedBy + ' -   - Text = ' + item.Text + '</span>';
+            var btn = '&nbsp;&nbsp;&nbsp;&nbsp;<span><input type="button" value="Update Blog Entry" onclick="updBtnClicked(' +
+                item.Id + ');"/></span>';
+            var voteUp = '&nbsp;&nbsp;&nbsp;&nbsp;<span><input type="button" value="Vote Up" onclick="voteBtnClicked(' +
+                item.Id + ', \'' + usr + '\' , 1);"/></span>';
+            var voteDown = '&nbsp;&nbsp;&nbsp;&nbsp;<span><input type="button" value="Vote Down" onclick="voteBtnClicked(' +
+                item.Id + ', \'' + usr + '\' , -1);"/></span>';
+
+            return strt + btn + voteUp + voteDown;
+        }
+
+        function find() {
+            var id = $('#blogId').val();
+            $('#blog1').text("");
+            $.getJSON(uri + '/' + id)
+                .done(function (data) {
+                    //$('#blog').text(formatItem(data));
+                    $('<li>' + formatItem(data)).appendTo($('#blog1'));
+                })
+                .fail(function (jqXHR, textStatus, err) {
+                    $('#blog1').text('Error: ' + err);
+                });
+        }
+
+        //var visibility;
+        function ShowBlogFields(visibility) {
+            var x = $('#blogFields');
+            if (visibility) {
+                $(x).show();
+                $('#blogText').focus();
+                $('#btnAddBlogEntry').hide();
+            } else {
+                $(x).hide(); 
+                //this.visibility = false;
+                $('#btnAddBlogEntry').show();
+            }
+        }
+
+        ShowBlogFields(false);
+
+        function addBtnClicked() {
+            mode = 'add';
+            ShowBlogFields(true);
+            $('#blogText').val('');
+        }
+
+        function sendBlogEntity() {
+            if (mode === 'add') {
+                addBlogEntity();
+            } else {
+                updateBlogEntity(updatedBlogId);
+            }
+        }
+
+        function addBlogEntity() {
+            var text = $('#blogText').val();
+            var user = $('#userField').val();
+            var data = { Text: text, CreatedBy: user }
+
+            $.ajax({
+                type: 'POST',
+                url: uri + '/AddBlogEntity',
+                data: JSON.stringify(data),
+                contentType: 'application/json; charset=utf-8',
+                dataType: 'json',
+                success: function(parm) {
+                    hideBlogFieldsDiv();
+                },
+                error: function(parm) {
+                    alert("Error Add Blog Entry FAILED!     response = " + parm.responseText);
+                }
+            });
+        }
+
+        function updateBlogEntity(id) {
+            var text = $('#blogText').val();
+            var data = { Id : id,Text: text }
+
+            $.ajax({
+                type: 'POST',
+                url: uri + '/UpdateBlogEntity',
+                data: JSON.stringify(data),
+                contentType: 'application/json; charset=utf-8',
+                dataType: 'json',
+                success: function(parm) {
+                    hideBlogFieldsDiv();
+                },
+                error: function(parm) {
+                    alert("Error Update Blog Entry FAILED!     response = " + parm.responseText);
+                }
+            });
+        }
+
+        function hideBlogFieldsDiv() {
+            mode = 'update';
+            ShowBlogFields(false);
+            location.reload();
+        }
+
+        var updatedBlogId;
+        function updBtnClicked(id) {
+            updatedBlogId = id;
+            findById(id);
+            ShowBlogFields(true);
+        }
+
+        function findById(id) {
+            $.getJSON(uri + '/' + id)
+                .done(function (data) {
+                    $('#blogText').val(data.Text);
+                })
+                .fail(function (jqXHR, textStatus, err) {
+                    $('#blogText').val('Error: ' + err);
+                });
+        }
+
+        function voteBtnClicked(id, user, vote) {
+            var data = { BlogId: id, VotedBy: user, Rateing: vote }
+
+            $.ajax({
+                type: 'POST',
+                url: 'api/Votes/AddVote',
+                data: JSON.stringify(data),
+                contentType: 'application/json; charset=utf-8',
+                dataType: 'json',
+                success: function(parm) {
+                },
+                error: function(parm) {
+                    alert("Error Vote FAILED! \r\n" + parm.responseText);
+                }
+            });
+        }
+    </script>
+</body>
+</html>
